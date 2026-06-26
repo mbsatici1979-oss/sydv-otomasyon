@@ -5,7 +5,8 @@ const crypto = require('crypto');
 const { exec } = require('child_process');
 
 const rootDir = __dirname;
-const dataDir = path.join(rootDir, 'data');
+const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV || process.env.NOW_REGION || rootDir.startsWith('/var/task'));
+const dataDir = process.env.DATA_DIR || (isVercel ? path.join('/tmp', 'sydv-data') : path.join(rootDir, 'data'));
 const tasitDir = path.join(rootDir, 'apps', 'tasit');
 const dogrudanTeminDir = path.join(rootDir, 'apps', 'dogrudan-temin');
 const yazismaFile = path.join(rootDir, 'apps', 'yazisma', 'index.html');
