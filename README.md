@@ -94,9 +94,21 @@ http://127.0.0.1:8091
 Kullanılabilecek değişkenler:
 
 - `PORT`: Programın çalışacağı yerel port.
+- `DATA_BACKEND`: Vercel/Supabase kullanımında `supabase` olarak ayarlanır.
+- `DATABASE_URL`: Supabase PostgreSQL bağlantı adresidir. Gerçek değer GitHub'a yazılmamalıdır.
 - `INITIAL_ADMIN_PASSWORD`: İlk kurulumda oluşturulacak yönetici kullanıcının geçici şifresi.
 
 Not: Program `.env` dosyasını otomatik okumaz. Değişkenler terminal veya sistem ortam değişkeni olarak verilmelidir.
+
+Vercel'de Supabase kullanmak için şu değişkenler tanımlanmalıdır:
+
+```text
+DATA_BACKEND=supabase
+DATABASE_URL=Supabase PostgreSQL bağlantı adresi
+INITIAL_ADMIN_PASSWORD=ilk yönetici geçici şifresi
+```
+
+`DATABASE_URL` yoksa program yerel Windows kullanımında eski JSON dosya sistemiyle çalışmaya devam eder.
 
 ## Veri Saklama
 
