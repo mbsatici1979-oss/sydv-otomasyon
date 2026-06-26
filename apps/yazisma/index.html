@@ -1,0 +1,1558 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SYDV Yazışma Programı</title>
+  <style>
+    :root {
+      --page: #f4f6f8;
+      --panel: #ffffff;
+      --ink: #202632;
+      --muted: #5f6b7a;
+      --line: #d8dee6;
+      --field: #f9fafb;
+      --primary: #1d6f72;
+      --primary-dark: #145458;
+      --accent: #8b3f2f;
+      --focus: rgba(29, 111, 114, 0.18);
+      --shadow: 0 18px 45px rgba(31, 41, 55, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background: var(--page);
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(620px, 1fr) minmax(320px, 460px);
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .workspace,
+    .preview-shell {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .workspace {
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 28px);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 18px 13px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 20px;
+      line-height: 1.2;
+    }
+
+    h2 {
+      font-size: 16px;
+      line-height: 1.25;
+    }
+
+    h3 {
+      font-size: 13px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin: 14px 0 10px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eef6f6;
+      color: var(--primary-dark);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .form-scroll {
+      overflow: auto;
+      padding: 12px 18px 18px;
+    }
+
+    .workflow-tabs {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 6px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fafb;
+    }
+
+    .tab-btn {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 4px;
+    }
+
+    .tab-btn[aria-selected="true"] {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .editor-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .editor-panel[hidden] {
+      display: none;
+    }
+
+    .panel-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 12px;
+    }
+
+    .section-lead {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .editor-section {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    .editor-section summary {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 12px;
+      cursor: pointer;
+      color: var(--primary-dark);
+      font-size: 13px;
+      font-weight: 700;
+      user-select: none;
+    }
+
+    .editor-section summary::after {
+      content: "Aç/Kapat";
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .editor-section[open] summary {
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfd;
+    }
+
+    .editor-section-body {
+      padding: 2px 12px 12px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 12px;
+      min-width: 0;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #344054;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--field);
+      color: var(--ink);
+      padding: 10px 11px;
+      outline: none;
+      min-height: 40px;
+    }
+
+    textarea {
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--focus);
+      background: #ffffff;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #eef2f4;
+    }
+
+    .segmented input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .segmented label {
+      min-height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .segmented input:checked + label {
+      background: #ffffff;
+      color: var(--primary-dark);
+      box-shadow: 0 1px 4px rgba(31, 41, 55, 0.14);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--line);
+      background: #fbfcfd;
+    }
+
+    .btn {
+      min-height: 38px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--ink);
+      background: #ffffff;
+      border-color: var(--line);
+    }
+
+    .btn.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn.primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn:hover {
+      border-color: #aeb8c4;
+    }
+
+    .status {
+      margin-left: auto;
+      align-self: center;
+      color: var(--muted);
+      font-size: 12px;
+      min-height: 16px;
+    }
+
+    .save-panel {
+      border-bottom: 1px solid var(--line);
+      background: #f8fafb;
+      padding: 0;
+    }
+
+    .save-panel summary {
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 18px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary-dark);
+      user-select: none;
+    }
+
+    .save-panel summary::after {
+      content: "Aç/Kapat";
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .save-panel[open] summary {
+      border-bottom: 1px solid var(--line);
+    }
+
+    .save-controls {
+      display: grid;
+      gap: 12px;
+      padding: 14px 18px 16px;
+    }
+
+    .save-block {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 12px;
+    }
+
+    .save-title {
+      margin-bottom: 10px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .save-block-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .save-block .field {
+      margin-bottom: 0;
+    }
+
+    .save-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      grid-column: 1 / -1;
+    }
+
+    .preview-shell {
+      max-height: calc(100vh - 28px);
+      overflow: auto;
+      padding: 12px;
+    }
+
+    .preview-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .paper {
+      width: 794px;
+      min-height: 1123px;
+      margin: 0 auto;
+      background: #ffffff;
+      color: #111827;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 14px 35px rgba(15, 23, 42, 0.16);
+      padding: 54px 70px 44px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 12pt;
+      line-height: 1.22;
+      zoom: 0.52;
+    }
+
+    .letterhead {
+      text-align: center;
+      font-weight: 700;
+      line-height: 1.25;
+      min-height: 112px;
+      white-space: pre-line;
+      text-transform: uppercase;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: 62px 1fr 124px;
+      gap: 4px 6px;
+      margin-top: 10px;
+      align-items: start;
+    }
+
+    .meta .date {
+      grid-column: 3;
+      grid-row: 1;
+      min-width: 118px;
+      text-align: right;
+    }
+
+    .meta-label {
+      font-weight: 700;
+    }
+
+    .recipient {
+      margin-top: 42px;
+      text-align: center;
+      font-weight: 700;
+      white-space: pre-line;
+      min-height: 46px;
+    }
+
+    .interest {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 6px;
+      margin-top: 20px;
+      padding-left: 0;
+      min-height: 24px;
+    }
+
+    .body-text,
+    .closing-text {
+      margin-top: 22px;
+      text-align: justify;
+      white-space: pre-line;
+      text-indent: 42px;
+    }
+
+    .closing-text {
+      margin-top: 20px;
+    }
+
+    .signature {
+      width: 250px;
+      margin: 44px 0 0 auto;
+      text-align: center;
+      min-height: 94px;
+    }
+
+    .signature .name {
+      margin-top: 48px;
+      font-weight: 700;
+    }
+
+    .signature .title {
+      margin-top: 2px;
+      white-space: pre-line;
+    }
+
+    .approval {
+      width: 250px;
+      margin: 34px auto 0;
+      text-align: center;
+      min-height: 118px;
+      white-space: pre-line;
+    }
+
+    .approval-label {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .approval-name {
+      margin-top: 18px;
+      font-weight: 700;
+    }
+
+    .approval-title {
+      margin-top: 2px;
+    }
+
+    .initials {
+      width: 360px;
+      margin-top: 34px;
+      font-size: 9.5pt;
+      line-height: 1.25;
+    }
+
+    .initials-row {
+      margin-top: 5px;
+      min-height: 14px;
+    }
+
+    .footer-info {
+      margin-top: auto;
+      padding-top: 28px;
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 18px;
+      font-size: 9.5pt;
+      line-height: 1.28;
+    }
+
+    .footer-info div {
+      white-space: pre-line;
+    }
+
+    .footer-right {
+      text-align: left;
+    }
+
+    .empty {
+      color: #9aa4b2;
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .workspace,
+      .preview-shell {
+        max-height: none;
+      }
+
+      .paper {
+        transform-origin: top center;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .app {
+        padding: 10px;
+      }
+
+      .field-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .workflow-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .save-controls {
+        grid-template-columns: 1fr;
+      }
+
+      .save-block-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-header,
+      .actions,
+      .form-scroll,
+      .preview-shell {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .preview-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .paper {
+        min-height: 960px;
+        padding: 36px 26px 34px;
+        font-size: 11pt;
+      }
+
+      .meta {
+        grid-template-columns: 58px 1fr;
+      }
+
+      .meta .date {
+        grid-column: 1 / -1;
+        grid-row: auto;
+        text-align: left;
+        margin-bottom: 6px;
+      }
+
+      .interest {
+        grid-template-columns: 46px 1fr;
+        padding-left: 0;
+      }
+
+      .signature {
+        width: 200px;
+      }
+
+      .initials {
+        width: auto;
+        margin-top: 34px;
+      }
+
+      .footer-info {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+    }
+
+    @media print {
+      @page {
+        size: A4;
+        margin: 0;
+      }
+
+      body {
+        background: #ffffff;
+      }
+
+      .workspace,
+      .preview-toolbar {
+        display: none;
+      }
+
+      .app,
+      .preview-shell {
+        display: block;
+        padding: 0;
+        border: 0;
+        box-shadow: none;
+        overflow: visible;
+        max-height: none;
+        background: #ffffff;
+      }
+
+      .paper {
+        width: 210mm;
+        min-height: 297mm;
+        border: 0;
+        box-shadow: none;
+        margin: 0;
+        padding: 18mm 22mm 16mm;
+        zoom: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="workspace" aria-label="Yazı bilgileri">
+      <div class="panel-header">
+        <h1>SYDV Yazışma Programı</h1>
+        <span class="badge">Giden Yazı</span>
+      </div>
+
+      <div class="workflow-tabs" role="tablist" aria-label="Yazı hazırlama adımları">
+        <button class="tab-btn" type="button" role="tab" aria-selected="true" data-panel-target="templates">Şablon</button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" data-panel-target="search">Kayıt Ara</button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" data-panel-target="records">Kaydet</button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" data-panel-target="info">Yazı</button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" data-panel-target="text">Metin</button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" data-panel-target="signature">İmza</button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" data-panel-target="footer">Alt Bilgi</button>
+      </div>
+
+      <div class="form-scroll">
+        <section class="editor-panel" data-panel="templates">
+          <div class="panel-card">
+            <p class="section-lead">Yeni yazıya başlamak için hazır örneklerden birini seçin.</p>
+        <div class="save-controls">
+          <div class="save-block">
+            <div class="save-title">Şablonlar</div>
+            <div class="save-block-grid">
+              <div class="field">
+                <label for="templateSelect">Yazı örneği</label>
+                <select id="templateSelect">
+                  <option value="public">Kurum ve Şahıs Yazıları</option>
+                  <option value="assignment">Görevlendirme ve Olur</option>
+                </select>
+              </div>
+              <div class="save-actions">
+                <button class="btn primary" id="applyTemplateBtn" type="button">Şablonu Aç</button>
+              </div>
+            </div>
+          </div>
+        </div>
+          </div>
+        </section>
+
+        <section class="editor-panel" data-panel="search" hidden>
+          <div class="panel-card">
+            <p class="section-lead">Kayıtlı yazıları konu, metin, sayı, tarih ve muhatap bilgilerine göre bulun.</p>
+        <div class="save-controls">
+          <div class="save-block">
+            <div class="save-title">Kayıtlı Yazıyı Bul</div>
+            <div class="save-block-grid">
+              <div class="field">
+                <label for="saveSearch">Genel arama</label>
+                <input id="saveSearch" placeholder="Konu, kurum, şahıs veya metin">
+              </div>
+              <div class="field">
+                <label for="searchNumber">Sayı</label>
+                <input id="searchNumber" placeholder="Örn. 2025/">
+              </div>
+              <div class="field">
+                <label for="searchDateFrom">Başlangıç tarihi</label>
+                <input id="searchDateFrom" type="date">
+              </div>
+              <div class="field">
+                <label for="searchDateTo">Bitiş tarihi</label>
+                <input id="searchDateTo" type="date">
+              </div>
+              <div class="field full">
+                <label for="searchRecipient">Kurum / şahıs</label>
+                <input id="searchRecipient" placeholder="Muhatap adı">
+              </div>
+              <div class="field">
+                <label for="savedLetters">Kayıtlı yazılar</label>
+                <select id="savedLetters">
+                  <option value="">Kayıt seçiniz</option>
+                </select>
+              </div>
+              <div class="save-actions">
+                <button class="btn" id="loadBtn" type="button">Seçili Yazıyı Çağır</button>
+                <button class="btn" id="clearSearchBtn" type="button">Filtreleri Temizle</button>
+              </div>
+            </div>
+          </div>
+        </div>
+          </div>
+        </section>
+
+        <section class="editor-panel" data-panel="records" hidden>
+          <div class="panel-card">
+            <p class="section-lead">Hazırladığınız yazıyı yeni kayıt olarak saklayın veya seçili kaydın üzerine değişiklikleri işleyin.</p>
+        <div class="save-controls">
+          <div class="save-block">
+            <div class="save-title">Kaydetme</div>
+            <div class="save-block-grid">
+              <div class="field">
+                <label for="saveName">Kayıt adı</label>
+                <input id="saveName" value="İrem ÇİÇEK Hk.">
+              </div>
+              <div class="save-actions">
+                <button class="btn primary" id="saveBtn" type="button">Yeni / Farklı Kaydet</button>
+                <button class="btn" id="updateSaveBtn" type="button">Seçili Kaydı Değiştir</button>
+              </div>
+            </div>
+          </div>
+        </div>
+          </div>
+        </section>
+
+        <section class="editor-panel" data-panel="info" hidden>
+          <div class="panel-card">
+            <p class="section-lead">Başlık, sayı, tarih, konu, muhatap ve ilgi bilgilerini buradan doldurun.</p>
+        <h3>Başlık</h3>
+        <div class="field">
+          <label for="letterhead">Üst başlık</label>
+          <textarea id="letterhead" rows="3">GÖKSUN
+SOSYAL YARDIMLAŞMA VE DAYANIŞMA VAKFI BAŞKANLIĞI</textarea>
+        </div>
+
+        <h3>Yazı Bilgileri</h3>
+        <div class="field-grid">
+          <div class="field">
+            <label for="number">Sayı</label>
+            <input id="number" value="2025/">
+          </div>
+          <div class="field">
+            <label for="date">Tarih</label>
+            <input id="date" type="date">
+          </div>
+          <div class="field full">
+            <label for="subject">Konu</label>
+            <input id="subject" value="İrem ÇİÇEK Hk.">
+          </div>
+        </div>
+
+        <h3>Muhatap</h3>
+        <div class="field">
+          <label for="recipient">Gideceği kurum</label>
+          <textarea id="recipient" rows="3">KAHRAMANMARAŞ VALİLİĞİ
+(İl Sağlık Müdürlüğüne)</textarea>
+        </div>
+
+        <h3>İlgi</h3>
+        <div class="field">
+          <div class="segmented" role="radiogroup" aria-label="İlgi durumu">
+            <input id="interestYes" name="interestState" type="radio" value="yes" checked>
+            <label for="interestYes">İlgi Var</label>
+            <input id="interestNo" name="interestState" type="radio" value="no">
+            <label for="interestNo">İlgi Yok</label>
+          </div>
+        </div>
+        <div class="field" id="interestField">
+          <label for="interestText">İlgi bilgisi</label>
+          <textarea id="interestText" rows="3">E-55590723-419-272793741 sayılı yazınız.</textarea>
+        </div>
+          </div>
+        </section>
+
+        <section class="editor-panel" data-panel="text" hidden>
+          <div class="panel-card">
+            <p class="section-lead">Yazının ana metnini ve sonuç cümlesini bu alanda düzenleyin.</p>
+        <h3>Metin</h3>
+        <div class="field">
+          <label for="bodyText">Yazı içeriği</label>
+          <textarea id="bodyText" rows="7">İlgi yazıda bahsi geçen İrem ÇİÇEK için 18/04/2025 tarihinde hane ziyareti yapılmış olup, İrem ÇİÇEK’in annesi Meyrem ÇİÇEK adına Vakfımız Başkanlığı Mütevelli Heyeti tarafından nakdi yardım yapılmıştır.</textarea>
+        </div>
+        <div class="field">
+          <label for="closingText">Alt metin / sonuç kısmı</label>
+          <textarea id="closingText" rows="4">Bilgilerinize arz ederim.</textarea>
+        </div>
+          </div>
+        </section>
+
+        <section class="editor-panel" data-panel="signature" hidden>
+          <div class="panel-card">
+            <p class="section-lead">İmza, olur ve paraf bilgilerini gerektiğinde doldurun. Boş bırakılan olur/paraf alanları belgede görünmez.</p>
+        <h3>İmza</h3>
+        <div class="field-grid">
+          <div class="field">
+            <label for="signName">İmzalayan ad soyad</label>
+            <input id="signName" value="Mehmet Başar SATICI">
+          </div>
+          <div class="field">
+            <label for="signTitle">Unvan</label>
+            <textarea id="signTitle" rows="2">Vakıf Müdürü</textarea>
+          </div>
+        </div>
+
+        <h3>Olur</h3>
+        <div class="field-grid">
+          <div class="field">
+            <label for="approvalDate">Olur tarihi</label>
+            <input id="approvalDate" placeholder="İsteğe bağlı">
+          </div>
+          <div class="field">
+            <label for="approvalName">Olur veren</label>
+            <input id="approvalName" placeholder="İsteğe bağlı">
+          </div>
+          <div class="field full">
+            <label for="approvalTitle">Olur unvanı</label>
+            <textarea id="approvalTitle" rows="2" placeholder="İsteğe bağlı"></textarea>
+          </div>
+        </div>
+
+        <h3>Paraf</h3>
+        <div class="field-grid">
+          <div class="field">
+            <label for="parafDate">Paraf tarihi</label>
+            <input id="parafDate" value="…/04/2025">
+          </div>
+          <div class="field">
+            <label for="preparedBy">Paraf bilgisi</label>
+            <input id="preparedBy" value="Büro Gör. İsmet AYDIN">
+          </div>
+          <div class="field full">
+            <label for="checkedBy">İkinci paraf</label>
+            <input id="checkedBy" placeholder="İsteğe bağlı">
+          </div>
+          <div class="field full">
+            <label for="thirdParaf">Üçüncü paraf</label>
+            <input id="thirdParaf" placeholder="İsteğe bağlı">
+          </div>
+        </div>
+          </div>
+        </section>
+
+        <section class="editor-panel" data-panel="footer" hidden>
+          <div class="panel-card">
+            <p class="section-lead">Belgenin altındaki adres, telefon, KEP ve ayrıntılı bilgi alanlarını buradan düzenleyin.</p>
+        <h3>Alt Bilgi</h3>
+        <div class="field-grid">
+          <div class="field full">
+            <label for="addressLine1">Adres</label>
+            <input id="addressLine1" value="Pınarbaşı Mah. Hoca Hacı Çiçek Sok. No: 24">
+          </div>
+          <div class="field">
+            <label for="addressLine2">İlçe / il</label>
+            <input id="addressLine2" value="Göksun- Kahramanmaraş">
+          </div>
+          <div class="field">
+            <label for="phone">Telefon</label>
+            <input id="phone" value="03447145050">
+          </div>
+          <div class="field">
+            <label for="detailInfo">Ayrıntılı bilgi</label>
+            <input id="detailInfo" value="İsmet AYDIN Büro Görevlisi">
+          </div>
+          <div class="field">
+            <label for="kep">KEP</label>
+            <input id="kep" value="goksunsydv@hs01.kep.tr">
+          </div>
+        </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="printBtn" type="button">Yazdır</button>
+        <button class="btn" id="copyBtn" type="button">Metni Kopyala</button>
+        <button class="btn" id="clearBtn" type="button">Temizle</button>
+        <span class="status" id="status" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="preview-shell" aria-label="Belge önizleme">
+      <div class="preview-toolbar">
+        <h2>Belge Önizleme</h2>
+        <span class="badge">A4 Resmi Yazı</span>
+      </div>
+
+      <article class="paper" id="paper">
+        <div class="letterhead" id="pLetterhead"></div>
+
+        <div class="meta">
+          <div class="date" id="pDate"></div>
+          <div class="meta-label">Sayı :</div>
+          <div id="pNumber"></div>
+          <div class="meta-label">Konu :</div>
+          <div id="pSubject"></div>
+        </div>
+
+        <div class="recipient" id="pRecipient"></div>
+
+        <div class="interest" id="pInterestWrap">
+          <div class="meta-label">İlgi:</div>
+          <div id="pInterest"></div>
+        </div>
+
+        <div class="body-text" id="pBody"></div>
+        <div class="closing-text" id="pClosing"></div>
+
+        <div class="signature">
+          <div class="name" id="pSignName"></div>
+          <div class="title" id="pSignTitle"></div>
+        </div>
+
+        <div class="approval" id="pApprovalWrap">
+          <div class="approval-label">OLUR</div>
+          <div id="pApprovalDate"></div>
+          <div class="approval-name" id="pApprovalName"></div>
+          <div class="approval-title" id="pApprovalTitle"></div>
+        </div>
+
+        <div class="initials">
+          <div class="initials-row">
+            <span id="pPrepared"></span>
+          </div>
+          <div class="initials-row">
+            <span id="pChecked"></span>
+          </div>
+          <div class="initials-row">
+            <span id="pThirdParaf"></span>
+          </div>
+        </div>
+
+        <div class="footer-info">
+          <div id="pFooterLeft"></div>
+          <div class="footer-right" id="pFooterRight"></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const fields = {
+      letterhead: document.getElementById("letterhead"),
+      number: document.getElementById("number"),
+      date: document.getElementById("date"),
+      subject: document.getElementById("subject"),
+      recipient: document.getElementById("recipient"),
+      interestText: document.getElementById("interestText"),
+      bodyText: document.getElementById("bodyText"),
+      closingText: document.getElementById("closingText"),
+      signName: document.getElementById("signName"),
+      signTitle: document.getElementById("signTitle"),
+      approvalDate: document.getElementById("approvalDate"),
+      approvalName: document.getElementById("approvalName"),
+      approvalTitle: document.getElementById("approvalTitle"),
+      preparedBy: document.getElementById("preparedBy"),
+      checkedBy: document.getElementById("checkedBy"),
+      thirdParaf: document.getElementById("thirdParaf"),
+      parafDate: document.getElementById("parafDate"),
+      addressLine1: document.getElementById("addressLine1"),
+      addressLine2: document.getElementById("addressLine2"),
+      phone: document.getElementById("phone"),
+      detailInfo: document.getElementById("detailInfo"),
+      kep: document.getElementById("kep")
+    };
+
+    const preview = {
+      letterhead: document.getElementById("pLetterhead"),
+      number: document.getElementById("pNumber"),
+      date: document.getElementById("pDate"),
+      subject: document.getElementById("pSubject"),
+      recipient: document.getElementById("pRecipient"),
+      interestWrap: document.getElementById("pInterestWrap"),
+      interest: document.getElementById("pInterest"),
+      body: document.getElementById("pBody"),
+      closing: document.getElementById("pClosing"),
+      signName: document.getElementById("pSignName"),
+      signTitle: document.getElementById("pSignTitle"),
+      approvalWrap: document.getElementById("pApprovalWrap"),
+      approvalDate: document.getElementById("pApprovalDate"),
+      approvalName: document.getElementById("pApprovalName"),
+      approvalTitle: document.getElementById("pApprovalTitle"),
+      prepared: document.getElementById("pPrepared"),
+      checked: document.getElementById("pChecked"),
+      thirdParaf: document.getElementById("pThirdParaf"),
+      footerLeft: document.getElementById("pFooterLeft"),
+      footerRight: document.getElementById("pFooterRight")
+    };
+
+    const interestField = document.getElementById("interestField");
+    const templateSelect = document.getElementById("templateSelect");
+    const saveName = document.getElementById("saveName");
+    const saveSearch = document.getElementById("saveSearch");
+    const searchNumber = document.getElementById("searchNumber");
+    const searchDateFrom = document.getElementById("searchDateFrom");
+    const searchDateTo = document.getElementById("searchDateTo");
+    const searchRecipient = document.getElementById("searchRecipient");
+    const savedLetters = document.getElementById("savedLetters");
+    const tabButtons = document.querySelectorAll(".tab-btn");
+    const editorPanels = document.querySelectorAll(".editor-panel");
+    const status = document.getElementById("status");
+    const STORAGE_KEY = "sydv-yazisma-kayitlari";
+    let activeSaveId = "";
+    const templates = {
+      public: {
+        name: "Kurum ve Şahıs Yazıları",
+        data: {
+          letterhead: "GÖKSUN\nSOSYAL YARDIMLAŞMA VE DAYANIŞMA VAKFI BAŞKANLIĞI",
+          number: "2025/",
+          date: "2025-04-25",
+          subject: "İrem ÇİÇEK Hk.",
+          recipient: "KAHRAMANMARAŞ VALİLİĞİ\n(İl Sağlık Müdürlüğüne)",
+          interestText: "E-55590723-419-272793741 sayılı yazınız.",
+          bodyText: "İlgi yazıda bahsi geçen İrem ÇİÇEK için 18/04/2025 tarihinde hane ziyareti yapılmış olup, İrem ÇİÇEK’in annesi Meyrem ÇİÇEK adına Vakfımız Başkanlığı Mütevelli Heyeti tarafından nakdi yardım yapılmıştır.",
+          closingText: "Bilgilerinize arz ederim.",
+          signName: "Mehmet Başar SATICI",
+          signTitle: "Vakıf Müdürü",
+          approvalDate: "",
+          approvalName: "",
+          approvalTitle: "",
+          parafDate: "…/04/2025",
+          preparedBy: "Büro Gör. İsmet AYDIN",
+          checkedBy: "",
+          thirdParaf: "",
+          addressLine1: "Pınarbaşı Mah. Hoca Hacı Çiçek Sok. No: 24",
+          addressLine2: "Göksun- Kahramanmaraş",
+          phone: "03447145050",
+          detailInfo: "İsmet AYDIN Büro Görevlisi",
+          kep: "goksunsydv@hs01.kep.tr",
+          interestState: "yes"
+        }
+      },
+      assignment: {
+        name: "Görevlendirme ve Olur",
+        data: {
+          letterhead: "GÖKSUN\nSOSYAL YARDIMLAŞMA VE DAYANIŞMA VAKFI BAŞKANLIĞI",
+          number: "2025/",
+          date: "2025-02-24",
+          subject: "Görevlendirme",
+          recipient: "GÖKSUN KAYMAKAMLIĞINA",
+          interestText: "",
+          bodyText: "Sosyal Yardımlar Genel Müdürlüğünün 04.02.2025 tarihli yazısı gereği, Vefa (Yaşlı Evde Bakım) Programı personeline yönelik ülke çapında gerçekleştirilecek sıfır atık eğitimleri kapsamında 25/02/2025 Salı günü 13:00-17:00 saatleri arasında Dulkadiroğlu Muhammet Murat Akkurt Gençlik Merkezi toplantı salonunda eğitim verilecek olup, VEFA ve ADEM personellerinin şoför Fahrettin KOÇ yönetiminde İlçe Milli Eğitim Müdürlüğüne ait 46 F 1200 plakalı araç ile 25/02/2025 tarihinde Kahramanmaraş İline gidip gelmek üzere görevlendirilmesine, akaryakıt giderinin Vakfımız tarafından karşılanması hususunda,",
+          closingText: "Olurlarınıza arz ederim.",
+          signName: "Mehmet Başar SATICI",
+          signTitle: "Vakıf Müdürü",
+          approvalDate: "…./02/2025",
+          approvalName: "Ömer Faruk DUMAN",
+          approvalTitle: "Vakıf Başkanı\nKaymakam",
+          parafDate: "",
+          preparedBy: "",
+          checkedBy: "",
+          thirdParaf: "",
+          addressLine1: "Pınarbaşı Mah. Hoca Hacı Çiçek Sok. No: 24",
+          addressLine2: "Göksun- Kahramanmaraş",
+          phone: "03447145050",
+          detailInfo: "İsmet AYDIN Büro Görevlisi",
+          kep: "goksunsydv@hs01.kep.tr",
+          interestState: "no"
+        }
+      }
+    };
+
+    function valueOrEmpty(value, fallback = "................................") {
+      const trimmed = value.trim();
+      return trimmed ? trimmed : fallback;
+    }
+
+    function formatDate(value) {
+      if (!value) return new Date().toLocaleDateString("tr-TR");
+      const [year, month, day] = value.split("-");
+      return `${day}/${month}/${year}`;
+    }
+
+    function hasInterest() {
+      return document.querySelector("input[name='interestState']:checked").value === "yes";
+    }
+
+    function setText(node, value, fallback) {
+      const finalValue = valueOrEmpty(value, fallback);
+      node.textContent = finalValue;
+      node.classList.toggle("empty", !value.trim());
+    }
+
+    function parafLine(value) {
+      const date = fields.parafDate.value.trim() || "…/04/2025";
+      const text = value.trim();
+      return text ? `${date} ${text}` : "";
+    }
+
+    function setParaf(node, value) {
+      const line = parafLine(value);
+      node.textContent = line;
+      node.parentElement.style.display = line ? "" : "none";
+    }
+
+    function updateApproval() {
+      const hasApproval = fields.approvalDate.value.trim() || fields.approvalName.value.trim() || fields.approvalTitle.value.trim();
+      preview.approvalWrap.style.display = hasApproval ? "" : "none";
+      preview.approvalDate.textContent = fields.approvalDate.value.trim();
+      preview.approvalName.textContent = fields.approvalName.value.trim();
+      preview.approvalTitle.textContent = fields.approvalTitle.value.trim();
+    }
+
+    function updateFooter() {
+      const left = [
+        `Adres: ${valueOrEmpty(fields.addressLine1.value, "")}`,
+        valueOrEmpty(fields.addressLine2.value, ""),
+        `Tel: ${valueOrEmpty(fields.phone.value, "")}`
+      ].filter((line) => line.trim() && line.trim() !== "Adres:" && line.trim() !== "Tel:");
+
+      const right = [
+        `Ayrıntılı Bilgi: ${valueOrEmpty(fields.detailInfo.value, "")}`,
+        `Kep: ${valueOrEmpty(fields.kep.value, "")}`
+      ].filter((line) => line.trim() && line.trim() !== "Ayrıntılı Bilgi:" && line.trim() !== "Kep:");
+
+      preview.footerLeft.textContent = left.join("\n");
+      preview.footerRight.textContent = right.join("\n");
+    }
+
+    function updatePreview() {
+      setText(preview.letterhead, fields.letterhead.value);
+      setText(preview.number, fields.number.value);
+      setText(preview.date, formatDate(fields.date.value));
+      setText(preview.subject, fields.subject.value);
+      setText(preview.recipient, fields.recipient.value);
+      setText(preview.body, fields.bodyText.value, "Yazı metni buraya gelecektir.");
+      setText(preview.closing, fields.closingText.value, "Alt metin buraya gelecektir.");
+      setText(preview.signName, fields.signName.value, "AD SOYAD");
+      setText(preview.signTitle, fields.signTitle.value, "Unvan");
+      updateApproval();
+      setParaf(preview.prepared, fields.preparedBy.value);
+      setParaf(preview.checked, fields.checkedBy.value);
+      setParaf(preview.thirdParaf, fields.thirdParaf.value);
+      updateFooter();
+
+      const showInterest = hasInterest();
+      interestField.style.display = showInterest ? "" : "none";
+      preview.interestWrap.style.display = showInterest ? "grid" : "none";
+      setText(preview.interest, fields.interestText.value, ".../.../2026 tarihli ve ........ sayılı yazı.");
+    }
+
+    function collectText() {
+      const lines = [
+        fields.letterhead.value,
+        "",
+        `Sayı : ${fields.number.value}`,
+        `Tarih: ${formatDate(fields.date.value)}`,
+        `Konu : ${fields.subject.value}`,
+        "",
+        fields.recipient.value,
+        ""
+      ];
+
+      if (hasInterest()) {
+        lines.push(`İlgi: ${fields.interestText.value}`, "");
+      }
+
+      lines.push(
+        fields.bodyText.value,
+        fields.closingText.value,
+        "",
+        fields.signName.value,
+        fields.signTitle.value,
+        ""
+      );
+
+      if (fields.approvalDate.value.trim() || fields.approvalName.value.trim() || fields.approvalTitle.value.trim()) {
+        lines.push(
+          "OLUR",
+          fields.approvalDate.value,
+          fields.approvalName.value,
+          fields.approvalTitle.value,
+          ""
+        );
+      }
+
+      lines.push(
+        parafLine(fields.preparedBy.value),
+        parafLine(fields.checkedBy.value),
+        parafLine(fields.thirdParaf.value),
+        "",
+        `Adres: ${fields.addressLine1.value}`,
+        fields.addressLine2.value,
+        `Tel: ${fields.phone.value}`,
+        `Ayrıntılı Bilgi: ${fields.detailInfo.value}`,
+        `Kep: ${fields.kep.value}`
+      );
+
+      return lines.join("\n");
+    }
+
+    function flash(message) {
+      status.textContent = message;
+      window.clearTimeout(flash.timer);
+      flash.timer = window.setTimeout(() => {
+        status.textContent = "";
+      }, 1800);
+    }
+
+    function showPanel(panelKey) {
+      tabButtons.forEach((button) => {
+        button.setAttribute("aria-selected", String(button.dataset.panelTarget === panelKey));
+      });
+
+      editorPanels.forEach((panel) => {
+        panel.hidden = panel.dataset.panel !== panelKey;
+      });
+    }
+
+    function readSavedLetters() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function writeSavedLetters(records) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function getInterestState() {
+      return hasInterest() ? "yes" : "no";
+    }
+
+    function setInterestState(value) {
+      document.getElementById(value === "no" ? "interestNo" : "interestYes").checked = true;
+    }
+
+    function collectFormData() {
+      const data = {};
+      Object.entries(fields).forEach(([key, field]) => {
+        data[key] = field.value;
+      });
+      data.interestState = getInterestState();
+      data.templateKey = templateSelect.value;
+      return data;
+    }
+
+    function applyFormData(data) {
+      Object.entries(fields).forEach(([key, field]) => {
+        field.value = data[key] || "";
+      });
+      setInterestState(data.interestState || "yes");
+      templateSelect.value = data.templateKey || templateSelect.value;
+      updatePreview();
+    }
+
+    function makeSaveName() {
+      const subject = fields.subject.value.trim();
+      return saveName.value.trim() || subject || "İsimsiz Yazı";
+    }
+
+    function syncSaveName(force = false) {
+      const subject = fields.subject.value.trim() || "İsimsiz Yazı";
+      const lastAuto = saveName.dataset.lastAuto || "";
+
+      if (force || !saveName.dataset.manual || saveName.value.trim() === "" || saveName.value === lastAuto) {
+        saveName.value = subject;
+        saveName.dataset.manual = "";
+      }
+
+      saveName.dataset.lastAuto = subject;
+    }
+
+    function setLoadedSaveName(name) {
+      saveName.value = name || fields.subject.value.trim() || "İsimsiz Yazı";
+      saveName.dataset.lastAuto = fields.subject.value.trim() || "İsimsiz Yazı";
+      saveName.dataset.manual = saveName.value === saveName.dataset.lastAuto ? "" : "true";
+    }
+
+    function applyTemplate(templateKey) {
+      const template = templates[templateKey] || templates.public;
+      applyFormData(template.data);
+      templateSelect.value = templateKey;
+      activeSaveId = "";
+      savedLetters.value = "";
+      syncSaveName(true);
+      showPanel("info");
+      flash(`${template.name} şablonu açıldı`);
+    }
+
+    function normalizeSearch(value) {
+      return value.toLocaleLowerCase("tr-TR").trim();
+    }
+
+    function recordSearchText(record) {
+      const data = record.data || {};
+      return normalizeSearch([
+        record.name,
+        data.number,
+        data.subject,
+        data.recipient,
+        data.interestText,
+        data.bodyText,
+        data.closingText,
+        data.signName
+      ].filter(Boolean).join(" "));
+    }
+
+    function recordMatchesFilters(record) {
+      const data = record.data || {};
+      const query = normalizeSearch(saveSearch.value);
+      const numberQuery = normalizeSearch(searchNumber.value);
+      const recipientQuery = normalizeSearch(searchRecipient.value);
+      const date = data.date || "";
+      const from = searchDateFrom.value;
+      const to = searchDateTo.value;
+
+      if (query && !recordSearchText(record).includes(query)) return false;
+      if (numberQuery && !normalizeSearch(data.number || "").includes(numberQuery)) return false;
+      if (recipientQuery && !normalizeSearch(data.recipient || "").includes(recipientQuery)) return false;
+      if (from && (!date || date < from)) return false;
+      if (to && (!date || date > to)) return false;
+
+      return true;
+    }
+
+    function refreshSavedList(selectedId = activeSaveId) {
+      const records = readSavedLetters();
+      savedLetters.innerHTML = '<option value="">Kayıt seçiniz</option>';
+
+      records
+        .slice()
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .filter(recordMatchesFilters)
+        .forEach((record) => {
+          const option = document.createElement("option");
+          option.value = record.id;
+          option.textContent = record.name;
+          savedLetters.appendChild(option);
+        });
+
+      savedLetters.value = selectedId || "";
+      activeSaveId = savedLetters.value;
+    }
+
+    function saveCurrentLetter() {
+      const records = readSavedLetters();
+      const now = new Date().toISOString();
+      const record = {
+        id: `letter-${Date.now()}`,
+        name: makeSaveName(),
+        updatedAt: now,
+        data: collectFormData()
+      };
+
+      records.push(record);
+      writeSavedLetters(records);
+      setLoadedSaveName(record.name);
+      activeSaveId = record.id;
+      refreshSavedList(record.id);
+      flash("Yazı kaydedildi");
+    }
+
+    function updateSelectedLetter() {
+      const records = readSavedLetters();
+      const selectedId = savedLetters.value || activeSaveId;
+      const existing = records.find((record) => record.id === selectedId);
+
+      if (!existing) {
+        flash("Değiştirilecek kayıt seçiniz");
+        return;
+      }
+
+      existing.name = makeSaveName();
+      existing.updatedAt = new Date().toISOString();
+      existing.data = collectFormData();
+
+      writeSavedLetters(records);
+      setLoadedSaveName(existing.name);
+      activeSaveId = existing.id;
+      refreshSavedList(existing.id);
+      flash("Kayıt değiştirildi");
+    }
+
+    function loadSelectedLetter() {
+      const record = readSavedLetters().find((item) => item.id === savedLetters.value);
+      if (!record) {
+        flash("Kayıt seçiniz");
+        return;
+      }
+
+      activeSaveId = record.id;
+      applyFormData(record.data);
+      setLoadedSaveName(record.name);
+      refreshSavedList(record.id);
+      showPanel("info");
+      flash("Yazı çağrıldı");
+    }
+
+    Object.values(fields).forEach((field) => {
+      field.addEventListener("input", updatePreview);
+    });
+
+    fields.subject.addEventListener("input", () => {
+      syncSaveName(false);
+    });
+
+    saveName.addEventListener("input", () => {
+      saveName.dataset.manual = "true";
+    });
+
+    document.querySelectorAll("input[name='interestState']").forEach((radio) => {
+      radio.addEventListener("change", updatePreview);
+    });
+
+    savedLetters.addEventListener("change", () => {
+      activeSaveId = savedLetters.value;
+      const record = readSavedLetters().find((item) => item.id === activeSaveId);
+      if (record) saveName.value = record.name;
+    });
+
+    saveSearch.addEventListener("input", () => {
+      refreshSavedList("");
+    });
+
+    [searchNumber, searchDateFrom, searchDateTo, searchRecipient].forEach((field) => {
+      field.addEventListener("input", () => {
+        refreshSavedList("");
+      });
+    });
+
+    document.getElementById("clearSearchBtn").addEventListener("click", () => {
+      saveSearch.value = "";
+      searchNumber.value = "";
+      searchDateFrom.value = "";
+      searchDateTo.value = "";
+      searchRecipient.value = "";
+      refreshSavedList("");
+      flash("Arama filtreleri temizlendi");
+    });
+
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        showPanel(button.dataset.panelTarget);
+      });
+    });
+
+    document.getElementById("applyTemplateBtn").addEventListener("click", () => {
+      applyTemplate(templateSelect.value);
+    });
+
+    document.getElementById("saveBtn").addEventListener("click", saveCurrentLetter);
+    document.getElementById("loadBtn").addEventListener("click", loadSelectedLetter);
+    document.getElementById("updateSaveBtn").addEventListener("click", updateSelectedLetter);
+
+    document.getElementById("printBtn").addEventListener("click", () => {
+      updatePreview();
+      window.print();
+    });
+
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      const text = collectText();
+
+      try {
+        await navigator.clipboard.writeText(text);
+        flash("Metin kopyalandı");
+        return;
+      } catch (error) {
+        const temp = document.createElement("textarea");
+        temp.value = text;
+        temp.setAttribute("readonly", "");
+        temp.style.position = "fixed";
+        temp.style.left = "-9999px";
+        document.body.appendChild(temp);
+        temp.select();
+        const copied = document.execCommand("copy");
+        document.body.removeChild(temp);
+        flash(copied ? "Metin kopyalandı" : "Kopyalama yapılamadı");
+      }
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      Object.values(fields).forEach((field) => {
+        field.value = "";
+      });
+      saveName.value = "";
+      saveSearch.value = "";
+      searchNumber.value = "";
+      searchDateFrom.value = "";
+      searchDateTo.value = "";
+      searchRecipient.value = "";
+      activeSaveId = "";
+      savedLetters.value = "";
+      document.getElementById("interestYes").checked = true;
+      updatePreview();
+      showPanel("info");
+      flash("Alanlar temizlendi");
+    });
+
+    fields.date.value = "2025-04-25";
+    syncSaveName(true);
+    refreshSavedList("");
+    updatePreview();
+  </script>
+</body>
+</html>

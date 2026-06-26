@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Taşıt Görev Programı</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="seal" aria-hidden="true"><span>T.C.</span></div>
+      <div class="title-block">
+        <p>Göksun Sosyal Yardımlaşma ve Dayanışma Vakfı</p>
+        <h1>Taşıt Görev Programı</h1>
+      </div>
+      <div class="seal" aria-hidden="true"><span>T.C.</span></div>
+    </header>
+
+    <main class="layout">
+      <section class="work-area" aria-label="Taşıt görev emri formu">
+        <div class="form-head">
+          <div>
+            <span class="eyebrow">Kayıt</span>
+            <strong id="recordLabel">Yeni kayıt</strong>
+            <span class="data-mode" id="dataMode">Veri durumu hazırlanıyor</span>
+          </div>
+          <div class="head-actions">
+            <button class="btn secondary" id="newRecordBtn" type="button">Yeni Kayıt</button>
+            <button class="btn danger" id="deleteRecordBtn" type="button">Kaydı Sil</button>
+            <button class="btn primary" id="saveRecordBtn" type="button">Kaydet</button>
+          </div>
+        </div>
+
+        <form id="missionForm" autocomplete="off">
+          <div hidden>
+            <input id="institution" name="institution">
+            <select id="unitResponsibleId" name="unitResponsibleId"></select>
+            <select id="requesterId" name="requesterId"></select>
+            <input id="endDate" name="endDate" type="hidden">
+            <select id="missionType" name="missionType">
+              <option>Resmi Görev</option>
+              <option>Özel Görev</option>
+            </select>
+            <textarea id="notes" name="notes"></textarea>
+            <div id="unitResponsiblePreview"></div>
+            <div id="requesterPreview"></div>
+          </div>
+          <div class="form-grid">
+            <fieldset class="panel">
+              <legend>Görevlendiren Birim Amiri</legend>
+              <label>
+                Ad Soyad
+                <select id="approverId" name="approverId" required></select>
+              </label>
+              <div class="person-preview" id="approverPreview"></div>
+            </fieldset>
+
+            <fieldset class="panel">
+              <legend>Araç ve Sürücü</legend>
+              <label>
+                Sürücü
+                <select id="driverId" name="driverId" required></select>
+              </label>
+              <div class="person-preview" id="driverPreview"></div>
+              <label>
+                Aracın Plakası
+                <select id="vehicleId" name="vehicleId" required></select>
+              </label>
+
+              <div class="paired-fields">
+                <label>
+                  Çıkış KM'si
+                  <input id="outKm" name="outKm" inputmode="numeric" type="number" min="0">
+                </label>
+                <label>
+                  Dönüş KM'si
+                  <input id="returnKm" name="returnKm" inputmode="numeric" type="number" min="0">
+                </label>
+              </div>
+
+              <div class="paired-fields">
+                <label>
+                  Görev Tarihi
+                  <input id="startDate" name="startDate" type="date" required>
+                </label>
+                <label>
+                  Çıkış Saati
+                  <input id="startTime" name="startTime" type="time" required>
+                </label>
+              </div>
+
+              <div class="paired-fields">
+                <label>
+                  Dönüş Saati
+                  <input id="endTime" name="endTime" type="time">
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="panel span-2">
+              <legend>Görev Bilgisi</legend>
+              <label>
+                Görevin Türü
+                <textarea id="taskName" name="taskName" rows="3" required></textarea>
+              </label>
+
+              <label>
+                Gidilecek Yer / Yerler
+                <textarea id="destination" name="destination" rows="3" required></textarea>
+              </label>
+            </fieldset>
+
+            <fieldset class="panel span-2">
+              <legend>Göreve Çıkacak Personel</legend>
+              <div class="add-person-row">
+                <label>
+                  Personel Seç
+                  <select id="passengerPicker"></select>
+                </label>
+                <button class="btn secondary" id="addPassengerBtn" type="button">Ekle</button>
+              </div>
+              <div class="table-wrap compact">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Ad Soyad</th>
+                      <th>Görev / Unvan</th>
+                      <th class="narrow">İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody id="passengerRows"></tbody>
+                </table>
+              </div>
+            </fieldset>
+
+          </div>
+        </form>
+
+        <div class="notice" id="noticeBox" role="status"></div>
+        <div class="conflict" id="conflictBox" role="alert"></div>
+      </section>
+
+      <aside class="side-area" aria-label="Kayıtlar ve raporlar">
+        <div class="side-tabs" aria-label="Yan bölüm seçimi">
+          <button class="side-tab active" data-side-panel="recordsPanel" type="button">Kayıtlar</button>
+          <button class="side-tab" data-side-panel="definitionsPanel" type="button">Tanımlar</button>
+          <button class="side-tab" data-side-panel="ledgerPanel" type="button">Defter</button>
+          <button class="side-tab" data-side-panel="fuelPanel" type="button">Yakıt</button>
+          <button class="side-tab" data-side-panel="reportsPanel" type="button">Rapor</button>
+        </div>
+
+        <section class="panel report-tools definition-tools side-panel" id="definitionsPanel">
+          <div class="section-title">
+            <div>
+              <span class="eyebrow">Tanımlar</span>
+              <h2>Personel ve Araç</h2>
+            </div>
+          </div>
+
+          <div class="definition-tabs" aria-label="Tanım türü seçimi">
+            <button class="tab-btn active" data-definition-type="people" type="button">Personel</button>
+            <button class="tab-btn" data-definition-type="approvers" type="button">Amir</button>
+            <button class="tab-btn" data-definition-type="drivers" type="button">Sürücü</button>
+            <button class="tab-btn" data-definition-type="vehicles" type="button">Araç</button>
+          </div>
+
+          <form class="definition-form" id="definitionForm" autocomplete="off">
+            <div class="definition-fields" id="definitionFields"></div>
+            <button class="btn primary" type="submit">Ekle</button>
+          </form>
+
+          <div class="table-wrap definition-list">
+            <table>
+              <thead id="definitionHead"></thead>
+              <tbody id="definitionRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel report-tools side-panel active" id="recordsPanel">
+          <div class="section-title">
+            <div>
+              <span class="eyebrow">Liste</span>
+              <h2>Görev Kayıtları</h2>
+            </div>
+            <button class="btn print" id="printMissionBtn" type="button">Görev Emri Yazdır</button>
+          </div>
+
+          <div class="filter-grid">
+            <label>
+              Ay
+              <select id="monthFilter"></select>
+            </label>
+            <label>
+              Yıl
+              <input id="yearFilter" type="number" min="2020" max="2100">
+            </label>
+            <label class="span-2">
+              Arama
+              <input id="searchFilter" placeholder="Plaka, sürücü, görev veya yer ara">
+            </label>
+          </div>
+
+          <div class="summary-grid" aria-label="Aylık özet">
+            <div class="summary-item">
+              <span>Görev</span>
+              <strong id="summaryCount">0</strong>
+            </div>
+            <div class="summary-item">
+              <span>KM</span>
+              <strong id="summaryKm">0</strong>
+            </div>
+            <div class="summary-item">
+              <span>Resmi</span>
+              <strong id="summaryOfficial">0</strong>
+            </div>
+            <div class="summary-item">
+              <span>Özel</span>
+              <strong id="summaryPrivate">0</strong>
+            </div>
+          </div>
+
+          <div class="table-wrap records">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tarih</th>
+                  <th>Plaka</th>
+                  <th>Sürücü</th>
+                  <th>Görev</th>
+                </tr>
+              </thead>
+              <tbody id="recordRows"></tbody>
+            </table>
+          </div>
+
+          <div class="pending-return">
+            <div class="section-title compact-title">
+              <div>
+                <span class="eyebrow">Takip</span>
+                <h2>Dönüş Bilgisi Bekleyenler</h2>
+              </div>
+            </div>
+            <div class="table-wrap pending-return-list">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tarih</th>
+                    <th>Plaka</th>
+                    <th>Görev</th>
+                    <th class="narrow">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody id="pendingReturnRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel report-tools side-panel" id="ledgerPanel">
+          <div class="section-title">
+            <div>
+              <span class="eyebrow">Defter</span>
+              <h2>Araç Kayıt Defteri</h2>
+            </div>
+            <button class="btn secondary" id="printLedgerBtn" type="button">A4 Yazdır</button>
+          </div>
+
+          <label>
+            Araç Seç
+            <select id="ledgerVehicleFilter"></select>
+          </label>
+
+          <div class="summary-grid ledger-summary" aria-label="Araç kayıt defteri özeti">
+            <div class="summary-item">
+              <span>Satır</span>
+              <strong id="ledgerCount">0</strong>
+            </div>
+            <div class="summary-item">
+              <span>KM</span>
+              <strong id="ledgerKm">0</strong>
+            </div>
+          </div>
+
+          <div id="ledgerBox" class="ledger-box"></div>
+        </section>
+
+        <section class="panel report-tools side-panel" id="fuelPanel">
+          <div class="section-title">
+            <div>
+              <span class="eyebrow">Araç</span>
+              <h2>Yakıt Takibi</h2>
+            </div>
+            <div class="head-actions">
+              <button class="btn secondary" id="newFuelBtn" type="button">Yeni</button>
+              <button class="btn primary" id="saveFuelBtn" type="button">Kaydet</button>
+              <button class="btn print" id="printFuelReportBtn" type="button">Araç Raporu Yazdır</button>
+            </div>
+          </div>
+
+          <form id="fuelForm" class="fuel-form" autocomplete="off">
+            <label>
+              Araç
+              <select id="fuelVehicleId" required></select>
+            </label>
+
+            <label>
+              Yakıtı Alan Şoför
+              <select id="fuelDriverId" required></select>
+            </label>
+
+            <div class="paired-fields">
+              <label>
+                Yakıt Tarihi
+                <input id="fuelDate" type="date" required>
+              </label>
+              <label>
+                Araç KM'si
+                <input id="fuelKm" type="number" min="0" inputmode="numeric" required>
+              </label>
+            </div>
+
+            <div class="paired-fields">
+              <label>
+                Alınan Litre
+                <input id="fuelLiters" type="number" min="0" step="0.01" inputmode="decimal" required>
+              </label>
+              <label>
+                Yakıt Türü
+                <select id="fuelType">
+                  <option>Motorin</option>
+                  <option>Benzin</option>
+                  <option>LPG</option>
+                </select>
+              </label>
+            </div>
+
+            <label>
+              Açıklama
+              <input id="fuelNote" placeholder="İstasyon, fiş no veya not">
+            </label>
+          </form>
+
+          <div class="fuel-filter">
+            <span class="eyebrow">Liste Tarih Aralığı</span>
+            <div class="paired-fields">
+              <label>
+                Başlangıç
+                <input id="fuelStartDate" type="date">
+              </label>
+              <label>
+                Bitiş
+                <input id="fuelEndDate" type="date">
+              </label>
+            </div>
+          </div>
+
+          <div class="fuel-report-heading">
+            <strong>Araç Bazlı Yakıt Alım Raporu</strong>
+            <span id="fuelReportCaption"></span>
+          </div>
+
+          <div class="summary-grid fuel-summary" aria-label="Yakıt özeti">
+            <div class="summary-item">
+              <span>Alım</span>
+              <strong id="fuelCount">0</strong>
+            </div>
+            <div class="summary-item">
+              <span>Litre</span>
+              <strong id="fuelTotalLiters">0</strong>
+            </div>
+          </div>
+
+          <div class="table-wrap fuel-list">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tarih</th>
+                  <th>Şoför</th>
+                  <th>KM</th>
+                  <th>Litre</th>
+                  <th>Sonraki Alıma KM</th>
+                  <th class="narrow">İşlem</th>
+                </tr>
+              </thead>
+              <tbody id="fuelRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel report-tools side-panel" id="reportsPanel">
+          <div class="section-title">
+            <div>
+              <span class="eyebrow">Rapor</span>
+              <h2>Aylık İcmal</h2>
+            </div>
+            <button class="btn secondary" id="printReportBtn" type="button">Rapor Yazdır</button>
+          </div>
+
+          <label>
+            Yılın Çeyreği
+            <select id="quarterFilter">
+              <option value="1">1. Çeyrek</option>
+              <option value="2">2. Çeyrek</option>
+              <option value="3">3. Çeyrek</option>
+              <option value="4">4. Çeyrek</option>
+            </select>
+          </label>
+
+          <div id="reportBox" class="report-box"></div>
+
+          <div class="person-report-tools">
+            <div class="section-title compact-title">
+              <div>
+                <span class="eyebrow">Personel</span>
+                <h2>Görev Raporu</h2>
+              </div>
+              <button class="btn secondary" id="printPersonReportBtn" type="button">Personel Raporu Yazdır</button>
+            </div>
+            <label>
+              Personel Seç
+              <select id="personReportFilter"></select>
+            </label>
+            <div id="personReportBox" class="report-box"></div>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <section id="printArea" class="print-area" aria-hidden="true"></section>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>
