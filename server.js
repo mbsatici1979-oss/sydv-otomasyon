@@ -307,6 +307,29 @@ function sendJson(response, status, value, extra) {
 }
 function sendError(response, status, message) { sendJson(response, status, { ok: false, error: message }); }
 
+function databaseDebugInfo() {
+  const value = process.env.DATABASE_URL || '';
+  const info = {
+    databaseUrlPresent: Boolean(value),
+    DATA_BACKEND: process.env.DATA_BACKEND || '',
+    host: null,
+    port: null,
+    database: null,
+    username: null
+  };
+  if (!value) return info;
+  try {
+    const parsed = new URL(value);
+    info.host = parsed.hostname || null;
+    info.port = parsed.port || null;
+    info.database = parsed.pathname ? decodeURIComponent(parsed.pathname.replace(/^\/+/, '')) || null : null;
+    info.username = parsed.username ? decodeURIComponent(parsed.username) : null;
+  } catch {
+    info.host = 'DATABASE_URL okunamadi';
+  }
+  return info;
+}
+
 function parseCookies(request) {
   return Object.fromEntries((request.headers.cookie || '').split(';').map(item => item.trim()).filter(Boolean).map(item => {
     const at = item.indexOf('=');
@@ -554,6 +577,7 @@ const server = http.createServer(async (request, response) => {
     if (await handleModuleApi(request, response, pathname)) return;
 
     if (pathname === '/api/health') { sendJson(response, 200, { ok: true, service: 'goksun-sydv-yonetim-sistemi' }); return; }
+    if (pathname === '/api/db-debug' && request.method === 'GET') { sendJson(response, 200, databaseDebugInfo()); return; }
     if (pathname === '/api/summary' && request.method === 'GET') {
       const user = await requireUser(request, response); if (!user) return;
       const tasit = await readTasItState(), yazisma = await readYazismaState(), modules = await readModuleState();
