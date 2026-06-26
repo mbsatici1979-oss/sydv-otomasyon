@@ -18,13 +18,25 @@ const usersFile = path.join(dataDir, 'kullanicilar.json');
 const requestedPort = Number(process.env.PORT || 8091);
 const port = Number.isInteger(requestedPort) && requestedPort > 0 && requestedPort < 65536 ? requestedPort : 8091;
 const initialAdminPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Degistiriniz123!';
-const useSupabase = process.env.DATA_BACKEND === 'supabase' && Boolean(process.env.DATABASE_URL);
+const authDisabled = process.env.AUTH_DISABLED !== '0';
+const useSupabase = !authDisabled && process.env.DATA_BACKEND === 'supabase' && Boolean(process.env.DATABASE_URL);
 let pgPool = null;
 let dbReady = false;
 
 const MODULES = ['asevi', 'tasit', 'yazisma', 'dogrudanTemin', 'personel'];
 const MODULE_ALIASES = { asevi: 'asevi', dogrudanTemin: 'dogrudanTemin', personel: 'personel' };
 const sessions = new Map();
+const bypassUser = {
+  id: 'auth-disabled',
+  username: 'sydv',
+  fullName: 'SYDV Kullanıcısı',
+  title: '',
+  active: true,
+  permissions: { asevi: true, tasit: true, yazisma: true, dogrudanTemin: true, personel: true, users: false },
+  mustChangePassword: false,
+  createdAt: null,
+  updatedAt: null
+};
 
 const contentTypes = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -338,6 +350,7 @@ function parseCookies(request) {
 }
 
 async function currentUser(request) {
+  if (authDisabled) return bypassUser;
   const token = parseCookies(request).sydv_session;
   if (!token) return null;
   if (useSupabase) {
@@ -373,6 +386,7 @@ function publicUser(user) {
 }
 
 async function requireUser(request, response, permission) {
+  if (authDisabled) return bypassUser;
   const user = await currentUser(request);
   if (!user) { sendError(response, 401, 'Oturum açmanız gerekiyor.'); return null; }
   if (permission && !user.permissions?.[permission]) { sendError(response, 403, 'Bu işlem için yetkiniz bulunmuyor.'); return null; }
@@ -412,6 +426,24 @@ async function invalidateUserSessions(userId) {
 }
 
 async function handleAuthApi(request, response, pathname) {
+  if (authDisabled) {
+    if (pathname === '/api/session' && request.method === 'GET') {
+      sendJson(response, 200, { authenticated: true, user: publicUser(bypassUser) });
+      return true;
+    }
+    if (pathname === '/api/login' && request.method === 'POST') {
+      sendJson(response, 200, { ok: true, user: publicUser(bypassUser) });
+      return true;
+    }
+    if (pathname === '/api/logout' && request.method === 'POST') {
+      sendJson(response, 200, { ok: true });
+      return true;
+    }
+    if (pathname === '/api/change-password' && request.method === 'POST') {
+      sendJson(response, 200, { ok: true, disabled: true });
+      return true;
+    }
+  }
   if (pathname === '/api/session' && request.method === 'GET') {
     const user = await currentUser(request);
     sendJson(response, 200, { authenticated: !!user, user: user ? publicUser(user) : null });
@@ -458,6 +490,7 @@ async function handleAuthApi(request, response, pathname) {
 
 async function handleUsersApi(request, response, pathname) {
   if (!pathname.startsWith('/api/users')) return false;
+  if (authDisabled) { sendError(response, 403, 'Kullanıcı yönetimi geçici olarak kapalı.'); return true; }
   const operator = await requireUser(request, response, 'users'); if (!operator) return true;
   const users = await readUsers();
   if (pathname === '/api/users' && request.method === 'GET') { sendJson(response, 200, { users: users.map(publicUser) }); return true; }
